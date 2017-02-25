@@ -4,6 +4,7 @@ import curses
 import time
 import threading
 import sys
+import click
 
 def read_train(filename='train.txt'):
     with open(filename) as fh:
@@ -18,9 +19,9 @@ def bell(train_thr):
         beep()
         time.sleep(0.5)
 
-def train():
+def train(obstacle=None):
     try:
-        curses.wrapper(curses_train)
+        curses.wrapper(curses_train, obstacle)
     except KeyboardInterrupt:
         # You fool.
         pass
@@ -30,12 +31,22 @@ def put_in_box(text):
     middle = '| ' + text + ' |'
     return [top_and_bottom, middle, top_and_bottom]
 
-def render_obstacle(stdscr, text='Node 3', y=13, x=5):
-    box_text = put_in_box(text)
+def render_obstacle(stdscr, obstacle, y=13, x=5):
+    max_y, max_x = stdscr.getmaxyx()
+    box_text = put_in_box(obstacle)
     for line_offset, line in enumerate(box_text):
-        stdscr.addstr(y + line_offset, x, line)
+        stdscr.addstr(y + line_offset, x, line[:max_x - x])
 
-def curses_train(stdscr):
+def render_exhaust(stdscr, train_progress, base_y):
+    """Fill y-space above train with hyper-realistic exhaust."""
+    max_y, max_x = stdscr.getmaxyx()
+    exh_left = 23  # Begin exhaust on F59 sprite
+    exh_right = 43 # End exhaust on F59 sprite
+
+    # TODO
+    pass
+
+def curses_train(stdscr, obstacle):
     max_y, max_x = stdscr.getmaxyx()
     curses.curs_set(0)
 
@@ -48,8 +59,9 @@ def curses_train(stdscr):
     debris_y = 15
     debris_spread = 5
     
-    render_obstacle(stdscr)
-    stdscr.refresh()
+    if obstacle:
+        render_obstacle(stdscr, obstacle)
+        stdscr.refresh()
 
     train_len = max([len(line) for line in good_train])
     for train_progress in reversed(range(-train_len, max_x)):
@@ -74,9 +86,14 @@ def curses_train(stdscr):
         stdscr.refresh()
         time.sleep(0.02)
 
-if __name__ == '__main__':
-    train_thr = threading.Thread(target=train)
+@click.command()
+@click.option('--obstacle', '-o')
+def main(obstacle):
+    train_thr = threading.Thread(target=train, args=[obstacle])
     bell_thr = threading.Thread(target=bell, args=[train_thr])
 
     train_thr.start()
     bell_thr.start()
+
+if __name__ == '__main__':
+    main()
