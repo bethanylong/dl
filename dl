@@ -9,10 +9,13 @@ def read_train(filename='train.txt'):
     with open(filename) as fh:
         return fh.readlines()
 
-def bell():
-    while True:
-        sys.stdout.write('\a')
-        sys.stdout.flush()
+def beep():
+    sys.stdout.write('\a')
+    sys.stdout.flush()
+
+def bell(train_thr):
+    while train_thr.is_alive():
+        beep()
         time.sleep(0.5)
 
 def train():
@@ -27,7 +30,7 @@ def put_in_box(text):
     middle = '| ' + text + ' |'
     return [top_and_bottom, middle, top_and_bottom]
 
-def render_obstacle(stdscr, text='Node 3', y=12, x=5):
+def render_obstacle(stdscr, text='Node 3', y=13, x=5):
     box_text = put_in_box(text)
     for line_offset, line in enumerate(box_text):
         stdscr.addstr(y + line_offset, x, line)
@@ -40,8 +43,11 @@ def curses_train(stdscr):
     good_train = read_train()
     y = 10
     x = 5
+
+    debris_x = 50
+    debris_y = 15
+    debris_spread = 5
     
-    #stdscr.addstr(y, x,  bad_train)
     render_obstacle(stdscr)
     stdscr.refresh()
 
@@ -49,16 +55,28 @@ def curses_train(stdscr):
     for train_progress in reversed(range(-train_len, max_x)):
         #stdscr.addstr(y, train_progress, good_train)
 
-        if train_progress >= 0:
-            for y_offset, line in enumerate(good_train):
-                stdscr.addstr(y + y_offset, train_progress, line[0 : max_x - train_progress])
-        else:
-            # Simulate drawing off end of screen
-            for y_offset, line in enumerate(good_train):
-                stdscr.addstr(y + y_offset, 0, line[-train_progress : max_x - train_progress])
+        for y_offset, line in enumerate(good_train):
+            if train_progress >= 0:
+                x_index = train_progress
+                line_part = line[0 : max_x - train_progress]
+            else:
+                # Simulate drawing off end of screen
+                x_index = 0
+                line_part = line[-train_progress : max_x - train_progress]
+
+            # Draw one line of train, without awkward blocky spaces at beginning (pretty collisions!)
+            left_stripped_line_part = line_part.lstrip()
+            left_length_difference = len(line_part) - len(left_stripped_line_part)
+            if x_index + left_length_difference >= max_x:
+                continue
+            stdscr.addstr(y + y_offset, x_index + left_length_difference, left_stripped_line_part)
+
         stdscr.refresh()
-        #time.sleep(0.05)
         time.sleep(0.02)
 
 if __name__ == '__main__':
-    train()
+    train_thr = threading.Thread(target=train)
+    bell_thr = threading.Thread(target=bell, args=[train_thr])
+
+    train_thr.start()
+    bell_thr.start()
