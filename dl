@@ -46,12 +46,36 @@ def render_exhaust(stdscr, train_progress, base_y):
     # TODO
     pass
 
+def draw_train(screen, train, given_y, given_x):
+    max_y, max_x = screen.getmaxyx()
+    for y_offset, line in enumerate(train):
+        line_to_display = line
+        x = given_x
+
+        if given_x >= 0:
+            # Haven't begun to go off screen: make pretty collisions
+            pretty_line = line_to_display.lstrip()
+            stripped_spaces = len(line) - len(pretty_line)
+            line_to_display = pretty_line
+            x += stripped_spaces
+        else:
+            # Decide how much of front of train to cut off
+            line_to_display = line_to_display[-given_x:]
+            x = 0
+
+        display_length = min(len(line_to_display), max_x - x)
+        line_to_display = line_to_display[:display_length]
+
+        if x >= max_x or x < -len(line_to_display):
+            return
+
+        screen.addstr(given_y + y_offset, x, line_to_display)
+
 def curses_train(stdscr, obstacle):
     max_y, max_x = stdscr.getmaxyx()
     curses.curs_set(0)
 
-    #bad_train = "#####"
-    good_train = read_train()
+    train = read_train()
     y = 10
     x = 5
 
@@ -63,26 +87,9 @@ def curses_train(stdscr, obstacle):
         render_obstacle(stdscr, obstacle)
         stdscr.refresh()
 
-    train_len = max([len(line) for line in good_train])
+    train_len = max([len(line) for line in train])
     for train_progress in reversed(range(-train_len, max_x)):
-        #stdscr.addstr(y, train_progress, good_train)
-
-        for y_offset, line in enumerate(good_train):
-            if train_progress >= 0:
-                x_index = train_progress
-                line_part = line[0 : max_x - train_progress]
-            else:
-                # Simulate drawing off end of screen
-                x_index = 0
-                line_part = line[-train_progress : max_x - train_progress]
-
-            # Draw one line of train, without awkward blocky spaces at beginning (pretty collisions!)
-            left_stripped_line_part = line_part.lstrip()
-            left_length_difference = len(line_part) - len(left_stripped_line_part)
-            if x_index + left_length_difference >= max_x:
-                continue
-            stdscr.addstr(y + y_offset, x_index + left_length_difference, left_stripped_line_part)
-
+        draw_train(stdscr, train, y, train_progress)
         stdscr.refresh()
         time.sleep(0.02)
 
