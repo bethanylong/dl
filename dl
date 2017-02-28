@@ -31,7 +31,7 @@ def put_in_box(text):
     middle = '| ' + text + ' |'
     return [top_and_bottom, middle, top_and_bottom]
 
-def render_obstacle(stdscr, obstacle, y=13, x=5):
+def render_obstacle(stdscr, obstacle, y, x=5):
     max_y, max_x = stdscr.getmaxyx()
     box_text = put_in_box(obstacle)
     for line_offset, line in enumerate(box_text):
@@ -74,24 +74,28 @@ def draw_train(screen, train, given_y, given_x):
 def curses_train(stdscr, obstacle):
     max_y, max_x = stdscr.getmaxyx()
     curses.curs_set(0)
+    interval = 0.02
 
     train = read_train()
-    y = 10
-    x = 5
+    train_height = len(train)
+    obstacle_height = 3
 
-    debris_x = 50
-    debris_y = 15
-    debris_spread = 5
-    
+    x = 5
+    y = max_y / 2 - train_height / 2
+    if y + train_height >= max_y:
+        train = ['Choo choo. Make your screen bigger! ']
+        obstacle = False
+        interval = 0.05
+
     if obstacle:
-        render_obstacle(stdscr, obstacle)
+        render_obstacle(stdscr, obstacle, y + train_height - obstacle_height)
         stdscr.refresh()
 
     train_len = max([len(line) for line in train])
     for train_progress in reversed(range(-train_len, max_x)):
         draw_train(stdscr, train, y, train_progress)
         stdscr.refresh()
-        time.sleep(0.02)
+        time.sleep(interval)
 
 @click.command()
 @click.option('--obstacle', '-o')
